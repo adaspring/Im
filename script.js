@@ -1,42 +1,15 @@
-document.getElementById('uploadForm').addEventListener('submit', async function (e) {
-  e.preventDefault();
+const uploadBtn = document.getElementById('uploadBtn'); const sortBtn = document.getElementById('sortBtn'); const uploadForm = document.getElementById('uploadForm'); const status = document.getElementById('status');
 
-  const form = e.target;
-  const formData = new FormData();
-  const files = document.getElementById('images').files;
-  const status = document.getElementById('status');
+// Enable sort button only if at least one checkbox is selected uploadForm.querySelectorAll('input[name="params"]').forEach(cb => { cb.addEventListener('change', () => { const checked = [...uploadForm.querySelectorAll('input[name="params"]:checked')]; sortBtn.disabled = checked.length === 0; }); });
 
-  if (!files.length) {
-    status.textContent = 'Please select at least one image.';
-    return;
-  }
+uploadBtn.addEventListener('click', async () => { const files = document.getElementById('images').files; if (!files.length) { status.textContent = 'Please select at least one image to upload.'; return; }
 
-  for (const file of files) {
-    formData.append('images', file);
-  }
+const formData = new FormData(); for (const file of files) { formData.append('images', file); }
 
-  const selectedParams = Array.from(form.querySelectorAll('input[name="params"]:checked')).map(cb => cb.value);
-  if (selectedParams.length === 0) {
-    status.textContent = 'Please select at least one category.';
-    return;
-  }
+status.textContent = 'Uploading images...'; try { const response = await fetch('/.netlify/functions/upload', { method: 'POST', body: formData, }); const result = await response.json(); if (result.success) { status.textContent = 'Images uploaded. Now select categories and click Sort & Zip.'; } else { status.textContent = 'Upload failed. Please try again.'; } } catch (err) { status.textContent = 'An error occurred while uploading. Please try again later.'; } });
 
-  formData.append('selectedParams', JSON.stringify(selectedParams));
-  status.textContent = 'Uploading and triggering GPT image sorting...';
+uploadForm.addEventListener('submit', async function (e) { e.preventDefault(); const selectedParams = Array.from(uploadForm.querySelectorAll('input[name="params"]:checked')).map(cb => cb.value); if (!selectedParams.length) { status.textContent = 'Select at least one category before sorting.'; return; }
 
-  try {
-    const response = await fetch('/.netlify/functions/upload', {
-      method: 'POST',
-      body: formData,
-    });
+const formData = new FormData(); formData.append('selectedParams', JSON.stringify(selectedParams)); status.textContent = 'Triggering GPT classification and sorting...';
 
-    const result = await response.json();
-    if (result.success) {
-      status.textContent = 'Processing started! Check GitHub Actions for zips shortly.';
-    } else {
-      status.textContent = 'Upload failed. Please try again.';
-    }
-  } catch (err) {
-    status.textContent = 'An error occurred. Please try again later.';
-  }
-});
+try { const response = await fetch('/.netlify/functions/upload', { method: 'POST', body: formData, }); const result = await response.json(); if (result.success) { status.textContent = 'Processing started. Check GitHub Actions shortly for download links.'; } else { status.textContent = 'Sorting trigger failed. Please try again.'; } } catch (err) { status.textContent = 'An error occurred while processing. Please try again later.'; } });
