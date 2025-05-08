@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Image Sorter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Smart Image Sorter</h1>
+    <form id="upload-form">
+      <input type="file" id="file-input" name="file" multiple accept="image/*" />
+      <fieldset>
+        <legend>Select categories:</legend>
+        <div class="checkboxes">
+          <label><input type="checkbox" value="1" /> Natural landscape (no people)</label>
+          <label><input type="checkbox" value="2.1" /> One person</label>
+          <label><input type="checkbox" value="2.2" /> Two people</label>
+          <label><input type="checkbox" value="2.3" /> More than two people</label>
+          <label><input type="checkbox" value="2.4" /> City scene</label>
+          <label><input type="checkbox" value="2.5" /> Natural landscape (with people)</label>
+          <label><input type="checkbox" value="2.6" /> Food present</label>
+          <label><input type="checkbox" value="3.0" /> Indoor scene</label>
+          <label><input type="checkbox" value="3.1" /> Pets or animals</label>
+          <label><input type="checkbox" value="3.2" /> Nighttime or low-light</label>
+          <label><input type="checkbox" value="3.3" /> Group selfie</label>
+          <label><input type="checkbox" value="3.4" /> Artistic or abstract</label>
+          <label><input type="checkbox" value="3.5" /> Text-heavy image</label>
+          <label><input type="checkbox" value="3.6" /> Vehicles or transportation</label>
+          <label><input type="checkbox" value="3.7" /> Child or baby present</label>
+          <label><input type="checkbox" value="3.8" /> Celebration or event</label>
+        </div>
+      </fieldset>
+      <div class="buttons">
+        <button type="button" id="upload-btn">Upload</button>
+        <button type="button" id="sort-btn" disabled>Sort & Zip</button>
+      </div>
+    </form>
+    <div id="status"></div>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

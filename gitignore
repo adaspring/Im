@@ -1,0 +1,11 @@
+# Ignore uploaded images and output zips
+uploaded_images/
+output_zips/
+
+# Ignore tag selections
+selected_params.json
+
+# Ignore environment and cache
+.env
+__pycache__/
+.netlify/
