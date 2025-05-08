@@ -13,3 +13,4 @@ uploadForm.addEventListener('submit', async function (e) { e.preventDefault(); c
 const formData = new FormData(); formData.append('selectedParams', JSON.stringify(selectedParams)); status.textContent = 'Triggering GPT classification and sorting...';
 
 try { const response = await fetch('/.netlify/functions/upload', { method: 'POST', body: formData, }); const result = await response.json(); if (result.success) { status.textContent = 'Processing started. Check GitHub Actions shortly for download links.'; } else { status.textContent = 'Sorting trigger failed. Please try again.'; } } catch (err) { status.textContent = 'An error occurred while processing. Please try again later.'; } });
+
