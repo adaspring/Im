@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,36 +10,33 @@
     <h1>Smart Image Sorter</h1>
     <form id="uploadForm" enctype="multipart/form-data">
       <input type="file" name="images" id="images" multiple accept="image/*" required />
+      <button type="button" id="uploadBtn">Upload Images</button><fieldset>
+    <legend>Select categories to group by:</legend>
+    <div class="checkboxes">
+      <label><input type="checkbox" name="params" value="1"> 1) Just natural landscape</label>
+      <label><input type="checkbox" name="params" value="2"> 2) Persons in any circumstance</label>
+      <label><input type="checkbox" name="params" value="2.1"> 2.1) One person</label>
+      <label><input type="checkbox" name="params" value="2.2"> 2.2) Two persons</label>
+      <label><input type="checkbox" name="params" value="2.3"> 2.3) More than two persons</label>
+      <label><input type="checkbox" name="params" value="2.4"> 2.4) City</label>
+      <label><input type="checkbox" name="params" value="2.5"> 2.5) Natural landscape</label>
+      <label><input type="checkbox" name="params" value="2.6"> 2.6) Food present</label>
+      <label><input type="checkbox" name="params" value="3.0"> 3.0) Indoor scene</label>
+      <label><input type="checkbox" name="params" value="3.1"> 3.1) Pets or animals</label>
+      <label><input type="checkbox" name="params" value="3.2"> 3.2) Nighttime</label>
+      <label><input type="checkbox" name="params" value="3.3"> 3.3) Group selfie</label>
+      <label><input type="checkbox" name="params" value="3.4"> 3.4) Artistic/abstract</label>
+      <label><input type="checkbox" name="params" value="3.5"> 3.5) Text-heavy</label>
+      <label><input type="checkbox" name="params" value="3.6"> 3.6) Vehicles</label>
+      <label><input type="checkbox" name="params" value="3.7"> 3.7) Child/baby present</label>
+      <label><input type="checkbox" name="params" value="3.8"> 3.8) Celebration</label>
+    </div>
+  </fieldset>
 
-      <fieldset>
-        <legend>Select categories to group by:</legend>
-        <div class="checkboxes">
-          <label><input type="checkbox" name="params" value="1"> 1) Just natural landscape</label>
-          <label><input type="checkbox" name="params" value="2"> 2) Persons in any circumstance</label>
-          <label><input type="checkbox" name="params" value="2.1"> 2.1) One person</label>
-          <label><input type="checkbox" name="params" value="2.2"> 2.2) Two persons</label>
-          <label><input type="checkbox" name="params" value="2.3"> 2.3) More than two persons</label>
-          <label><input type="checkbox" name="params" value="2.4"> 2.4) City</label>
-          <label><input type="checkbox" name="params" value="2.5"> 2.5) Natural landscape</label>
-          <label><input type="checkbox" name="params" value="2.6"> 2.6) Food present</label>
-          <label><input type="checkbox" name="params" value="3.0"> 3.0) Indoor scene</label>
-          <label><input type="checkbox" name="params" value="3.1"> 3.1) Pets or animals</label>
-          <label><input type="checkbox" name="params" value="3.2"> 3.2) Nighttime</label>
-          <label><input type="checkbox" name="params" value="3.3"> 3.3) Group selfie</label>
-          <label><input type="checkbox" name="params" value="3.4"> 3.4) Artistic/abstract</label>
-          <label><input type="checkbox" name="params" value="3.5"> 3.5) Text-heavy</label>
-          <label><input type="checkbox" name="params" value="3.6"> 3.6) Vehicles</label>
-          <label><input type="checkbox" name="params" value="3.7"> 3.7) Child/baby present</label>
-          <label><input type="checkbox" name="params" value="3.8"> 3.8) Celebration</label>
-        </div>
-      </fieldset>
+  <button type="submit" id="sortBtn" disabled>Sort & Zip</button>
+</form>
 
-      <button type="submit">Sort & Zip</button>
-    </form>
+<div id="status" class="status"></div>
 
-    <div id="status" class="status"></div>
-  </div>
-
-  <script src="script.js"></script>
-</body>
+  </div>  <script src="script.js"></script></body>
 </html>
