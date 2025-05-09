@@ -1,11 +1,25 @@
-# Ignore uploaded images and output zips
+# Smart Image Sorter Git Ignore
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Uploaded files (ephemeral)
 uploaded_images/
 output_zips/
 
-# Ignore tag selections
+# Parameters from frontend (ephemeral)
 selected_params.json
 
-# Ignore environment and cache
+# Environment variables
 .env
-__pycache__/
+
+# Node modules (if any local tools used)
+node_modules/
+
+# Netlify build cache
 .netlify/
+
+# System files
+.DS_Store
+Thumbs.db
