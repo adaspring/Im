@@ -1,12 +1,14 @@
-const fs = require('fs');
-const path = require('path');
-const { Readable } = require('stream');
+const AWS = require('aws-sdk');
 const multiparty = require('multiparty');
 
-// Permanent directory for uploaded images
-const STORAGE_DIR = path.join(__dirname, '..', '..', 'zips', 'uploaded_images');
+// Configure AWS S3 - Netlify will provide these via environment variables
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
 
-exports.handler = async function (event) {
+exports.handler = async function (event, context) {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -16,6 +18,7 @@ exports.handler = async function (event) {
 
   return new Promise((resolve) => {
     const form = new multiparty.Form();
+    const uploaded = [];
 
     form.parse(event, async (err, fields, files) => {
       if (err) {
@@ -25,19 +28,26 @@ exports.handler = async function (event) {
         });
       }
 
-      const uploaded = [];
       const images = files.images || [];
 
       try {
-        // Ensure the storage directory exists
-        fs.mkdirSync(STORAGE_DIR, { recursive: true });
-
-        // Save all image files
+        // Process all uploaded images
         for (const file of images) {
-          const buffer = fs.readFileSync(file.path);
-          const targetPath = path.join(STORAGE_DIR, file.originalFilename);
-          fs.writeFileSync(targetPath, buffer);
-          uploaded.push(file.originalFilename);
+          const fileContent = require('fs').readFileSync(file.path);
+          const params = {
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: `uploads/${file.originalFilename}`,
+            Body: fileContent,
+            ACL: 'public-read', // Set appropriate permissions
+            ContentType: file.headers['content-type']
+          };
+
+          // Upload to S3
+          const data = await s3.upload(params).promise();
+          uploaded.push({
+            filename: file.originalFilename,
+            url: data.Location
+          });
         }
 
         resolve({
