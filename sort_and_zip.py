@@ -1,31 +1,62 @@
 import os
 import json
 import base64
-import zipfile
-import requests
+import openai
 from pathlib import Path
-from PIL import Image
+from zipfile import ZipFile
 
-# Load OpenAI API key from environment
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-API_URL = "https://api.openai.com/v1/chat/completions"
+# Load API key securely from environment variable
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Set paths
+# Define paths
 UPLOAD_DIR = Path("uploaded_images")
-OUTPUT_DIR = Path("output_zips")
+ZIP_DIR = Path("output_zips")
 PARAMS_FILE = Path("selected_params.json")
 
 # Ensure output directory exists
-OUTPUT_DIR.mkdir(exist_ok=True)
+ZIP_DIR.mkdir(exist_ok=True)
 
-# Load selected tags
-with open(PARAMS_FILE, "r") as f:
-    selected_tags = json.load(f)
+# Load selected categories
+try:
+    with open(PARAMS_FILE, "r", encoding="utf-8") as f:
+        selected_categories = set(json.load(f))
+except Exception as e:
+    print(f"Error loading selected categories: {e}")
+    selected_categories = set()
 
-# Define GPT prompt template
-PROMPT_TEMPLATE = """
-You are a visual classifier. Given an image, classify it according to this controlled vocabulary (return all that apply):
+# Supported image types
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
 
+# Clean previous zips
+for zip_file in ZIP_DIR.glob("*.zip"):
+    zip_file.unlink()
+
+# Function to classify image via GPT-4o Vision
+def classify_image(filepath):
+    with open(filepath, "rb") as img_file:
+        base64_img = base64.b64encode(img_file.read()).decode("utf-8")
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a visual classifier. Use only the category codes."},
+                {"role": "user", "content": f"Classify this image using the given taxonomy:\n\n{CATEGORY_PROMPT}"},
+                {
+                    "role": "user",
+                    "content": {"image": {"base64": base64_img}, "type": "image_url"},
+                },
+            ],
+            max_tokens=50,
+        )
+        result_text = response.choices[0].message["content"]
+        detected = {code.strip() for code in result_text.split(",")}
+        return detected
+    except Exception as e:
+        print(f"Failed to classify {filepath.name}: {e}")
+        return set()
+
+# GPT-4o will use this prompt to choose category codes
+CATEGORY_PROMPT = """\
 1 - Natural landscape (no people)
 2 - People present
 2.1 - One person
@@ -39,70 +70,32 @@ You are a visual classifier. Given an image, classify it according to this contr
 3.2 - Nighttime or low-light
 3.3 - Group selfie or posed group
 3.4 - Artistic or abstract image
-3.5 - Text-heavy image (e.g. signs, menus)
+3.5 - Text-heavy image
 3.6 - Vehicles or transportation
 3.7 - Child or baby present
 3.8 - Celebration or event
-
-Respond with a JSON list of applicable codes.
+Only respond with applicable category codes, comma-separated. Example: 2.1, 3.3
 """
 
-def classify_image_b64(image_b64):
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "model": "gpt-4o",
-        "messages": [
-            {"role": "system", "content": PROMPT_TEMPLATE},
-            {"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
-            ]}
-        ],
-        "max_tokens": 200
-    }
-    response = requests.post(API_URL, json=body, headers=headers)
-    if response.status_code == 200:
-        try:
-            text = response.json()['choices'][0]['message']['content']
-            return json.loads(text)
-        except Exception:
-            return []
-    return []
+# Group images by tag
+grouped_images = {cat: [] for cat in selected_categories}
 
-def encode_image(image_path):
-    try:
-        with Image.open(image_path) as img:
-            img = img.convert("RGB")
-            buffer = Path("temp.jpg")
-            img.save(buffer, format="JPEG")
-            encoded = base64.b64encode(buffer.read_bytes()).decode('utf-8')
-            buffer.unlink()
-            return encoded
-    except Exception:
-        return None
-
-# Prepare zip grouping
-grouped = {tag: [] for tag in selected_tags}
-
-# Process each image
-for image_file in UPLOAD_DIR.iterdir():
-    if not image_file.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+# Process images
+for image_path in UPLOAD_DIR.glob("*"):
+    if image_path.suffix.lower() not in IMAGE_EXTS:
         continue
-    image_b64 = encode_image(image_file)
-    if not image_b64:
-        continue
-    categories = classify_image_b64(image_b64)
-    for tag in selected_tags:
-        if tag in categories:
-            grouped[tag].append(image_file)
+    matched_tags = classify_image(image_path)
+    for tag in matched_tags:
+        if tag in selected_categories:
+            grouped_images[tag].append(image_path)
 
-# Create zip files
-for tag, files in grouped.items():
-    if not files:
+# Zip per category
+for category, images in grouped_images.items():
+    if not images:
         continue
-    zip_path = OUTPUT_DIR / f"{tag.replace('.', '-')}.zip"
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for f in files:
-            zipf.write(f, arcname=f.name)
+    zip_path = ZIP_DIR / f"category_{category.replace('.', '_')}.zip"
+    with ZipFile(zip_path, "w") as zipf:
+        for img in images:
+            zipf.write(img, img.name)
+
+print("Sorting and zipping complete.")
