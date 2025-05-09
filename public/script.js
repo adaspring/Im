@@ -45,9 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadButton.disabled = true;
         
         try {
-            const formData = new FormData(uploadForm);
+            const formData = new FormData();
             
-            // Upload the files
+            // Add files to FormData (modified to work with multiparty)
+            for (let i = 0; i < files.length; i++) {
+                formData.append('images', files[i]);
+            }
+            
+            // Upload the files (modified endpoint)
             const response = await fetch('/.netlify/functions/upload', {
                 method: 'POST',
                 body: formData
@@ -60,7 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             
             if (result.success) {
-                showStatus(`Successfully uploaded ${result.uploaded} images. You can now select categories for sorting.`, 'success');
+                // Modified to handle new response format with URLs
+                showStatus(`Successfully uploaded ${result.uploaded.length} images. You can now select categories for sorting.`, 'success');
                 uploadedFiles = true;
                 enableSortingIfReady();
             } else {
