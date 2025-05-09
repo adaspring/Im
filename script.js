@@ -1,74 +1,89 @@
-document.addEventListener('DOMContentLoaded', function () {
-  const fileInput = document.getElementById('file-input');
+// script.js — handles upload and sort interactions
+
+document.addEventListener('DOMContentLoaded', () => {
+  const uploadForm = document.getElementById('upload-form');
   const uploadBtn = document.getElementById('upload-btn');
   const sortBtn = document.getElementById('sort-btn');
-  const statusBox = document.getElementById('status');
+  const statusBox = document.getElementById('status-box');
   const checkboxes = document.querySelectorAll('input[type="checkbox"]');
 
-  function getSelectedTags() {
+  let uploadedImages = [];
+
+  function getSelectedCategories() {
     return Array.from(checkboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
   }
 
-  checkboxes.forEach(cb => cb.addEventListener('change', () => {
-    sortBtn.disabled = getSelectedTags().length === 0;
-  }));
+  function updateSortButtonState() {
+    const hasSelection = getSelectedCategories().length > 0;
+    sortBtn.disabled = !hasSelection || uploadedImages.length === 0;
+  }
 
-  uploadBtn.addEventListener('click', async () => {
-    const files = fileInput.files;
-    if (!files.length) {
-      statusBox.textContent = 'Please select at least one image.';
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateSortButtonState);
+  });
+
+  uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const images = document.getElementById('image-input').files;
+    if (!images.length) {
+      statusBox.textContent = "Please select images to upload.";
       return;
     }
 
+    statusBox.textContent = "Uploading images...";
+
     const formData = new FormData();
-    for (const file of files) {
-      formData.append('file', file, file.name);
+    for (const img of images) {
+      formData.append('images', img);
     }
 
-    statusBox.textContent = 'Uploading...';
     try {
-      const response = await fetch('/.netlify/functions/upload', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       });
       const result = await response.json();
+
       if (result.success) {
-        statusBox.textContent = `Uploaded ${result.uploaded} files.`;
-        sortBtn.disabled = getSelectedTags().length === 0;
+        statusBox.textContent = "Images uploaded. Now select categories and click Sort.";
+        uploadedImages = result.uploaded;
+        updateSortButtonState();
       } else {
-        statusBox.textContent = 'Upload failed.';
+        statusBox.textContent = "Upload failed: " + (result.error || "Unknown error.");
       }
     } catch (err) {
-      statusBox.textContent = 'Error uploading images.';
+      statusBox.textContent = "Error uploading: " + err.message;
     }
   });
 
   sortBtn.addEventListener('click', async () => {
-    const tags = getSelectedTags();
-    if (tags.length === 0) {
-      statusBox.textContent = 'Please select at least one category.';
+    const categories = getSelectedCategories();
+    if (!categories.length) {
+      statusBox.textContent = "Select at least one category to sort.";
       return;
     }
 
-    const formData = new FormData();
-    formData.append('tags', tags.join(','));
+    statusBox.textContent = "Sorting and classifying images...";
 
-    statusBox.textContent = 'Sorting and classifying...';
+    const formData = new FormData();
+    formData.append('selected', JSON.stringify(categories));
+
     try {
-      const response = await fetch('/.netlify/functions/upload', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       });
       const result = await response.json();
-      if (result.sorted) {
-        statusBox.textContent = 'Sorting complete! You can download your zip files from GitHub.';
+
+      if (result.success) {
+        statusBox.textContent = "Done! Images sorted and zipped per category.";
       } else {
-        statusBox.textContent = 'No matching files to sort.';
+        statusBox.textContent = "Sort failed: " + (result.error || "Unknown error.");
       }
     } catch (err) {
-      statusBox.textContent = 'Error during sorting.';
+      statusBox.textContent = "Error sorting: " + err.message;
     }
   });
 });
