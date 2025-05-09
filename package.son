@@ -1,0 +1,7 @@
+{
+  "name": "smart-image-sorter",
+  "version": "1.0.0",
+  "dependencies": {
+    "multiparty": "^4.2.2"
+  }
+}
