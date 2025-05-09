@@ -1,108 +1,60 @@
-const formidable = require('formidable');
 const fs = require('fs');
 const path = require('path');
-const { promisify } = require('util');
-const mkdir = promisify(fs.mkdir);
-const { exec } = require('child_process');
-const execPromise = promisify(exec);
+const { Readable } = require('stream');
+const multiparty = require('multiparty');
 
-// Base directory for uploaded images
-const BASE_DIR = path.join(__dirname, '..', '..', 'tmp');
-const UPLOADS_DIR = path.join(BASE_DIR, 'uploaded_images');
-const OUTPUT_DIR = path.join(BASE_DIR, 'output_zips');
+// Permanent directory for uploaded images
+const STORAGE_DIR = path.join(__dirname, '..', '..', 'zips', 'uploaded_images');
 
-// Helper function to ensure directories exist
-const ensureDirectoryExistence = async (dirPath) => {
-  try {
-    await mkdir(dirPath, { recursive: true });
-  } catch (err) {
-    if (err.code !== 'EEXIST') throw err;
-  }
-};
-
-exports.handler = async (event, context) => {
-  // Only accept POST requests
+exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      body: JSON.stringify({ success: false, message: 'Method not allowed' })
+      body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
 
-  try {
-    // Ensure upload directories exist
-    await ensureDirectoryExistence(UPLOADS_DIR);
-    await ensureDirectoryExistence(OUTPUT_DIR);
+  return new Promise((resolve) => {
+    const form = new multiparty.Form();
 
-    // Parse the incoming form data
-    const form = new formidable.IncomingForm({
-      uploadDir: UPLOADS_DIR,
-      keepExtensions: true,
-      maxFileSize: 50 * 1024 * 1024, // 50MB limit
-      multiples: true
-    });
-
-    // Process the uploaded files
-    const { fields, files } = await new Promise((resolve, reject) => {
-      form.parse(event, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve({ fields, files });
-      });
-    });
-
-    // Convert files to array if it's not already
-    const uploadedFiles = files.images ? 
-      (Array.isArray(files.images) ? files.images : [files.images]) : 
-      [];
-
-    if (uploadedFiles.length === 0) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          success: false, 
-          message: 'No files were uploaded' 
-        })
-      };
-    }
-
-    // Ensure all files are images and move them to upload directory
-    for (const file of uploadedFiles) {
-      // Check if the file is an image
-      if (!file.mimetype || !file.mimetype.startsWith('image/')) {
-        return {
+    form.parse(event, async (err, fields, files) => {
+      if (err) {
+        return resolve({
           statusCode: 400,
+          body: JSON.stringify({ error: 'Form parsing failed', details: err.message })
+        });
+      }
+
+      const uploaded = [];
+      const images = files.images || [];
+
+      try {
+        // Ensure the storage directory exists
+        fs.mkdirSync(STORAGE_DIR, { recursive: true });
+
+        // Save all image files
+        for (const file of images) {
+          const buffer = fs.readFileSync(file.path);
+          const targetPath = path.join(STORAGE_DIR, file.originalFilename);
+          fs.writeFileSync(targetPath, buffer);
+          uploaded.push(file.originalFilename);
+        }
+
+        resolve({
+          statusCode: 200,
           body: JSON.stringify({
-            success: false,
-            message: `File ${file.originalFilename || 'unknown'} is not an image`
+            success: true,
+            message: 'Images uploaded successfully',
+            uploaded
           })
-        };
+        });
+      } catch (error) {
+        console.error('Upload failed:', error);
+        resolve({
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Upload failed', details: error.message })
+        });
       }
-
-      // Make sure file is properly saved with original filename
-      const newPath = path.join(UPLOADS_DIR, file.originalFilename || path.basename(file.filepath));
-      
-      // Rename the file if it's not already in the right place with the right name
-      if (file.filepath !== newPath) {
-        fs.renameSync(file.filepath, newPath);
-      }
-    }
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        uploaded: uploadedFiles.length,
-        message: `Successfully uploaded ${uploadedFiles.length} image(s)`
-      })
-    };
-  } catch (error) {
-    console.error('Upload error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        success: false,
-        message: `Server error: ${error.message}`
-      })
-    };
-  }
+    });
+  });
 };
