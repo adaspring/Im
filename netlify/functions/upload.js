@@ -1,59 +1,83 @@
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn } = require('child_process');
+const multiparty = require('multiparty');
 
-exports.handler = async function(event, context) {
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploaded_images');
+const PARAMS_FILE = path.join(__dirname, '..', '..', 'selected_params.json');
+const PYTHON_SCRIPT = path.join(__dirname, '..', '..', 'sort_and_zip.py');
+
+exports.handler = async function (event, context) {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
+      body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
 
-  const boundary = event.headers['content-type'].split('boundary=')[1];
-  const bodyBuffer = Buffer.from(event.body, 'base64');
-  const bodyText = bodyBuffer.toString('utf8');
+  return new Promise((resolve) => {
+    const form = new multiparty.Form();
+    const uploaded = [];
+    let selectedParams = [];
 
-  const uploadsDir = path.join(__dirname, '../../uploaded_images');
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    // Parse multipart form (images + selected categories)
+    form.parse(event, async (err, fields, files) => {
+      if (err) {
+        return resolve({
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Form parsing failed', details: err.message })
+        });
+      }
 
-  const matches = bodyText.matchAll(/name="file"; filename="(.+?)"\r\nContent-Type: (.+?)\r\n\r\n([\s\S]*?)\r\n--/g);
-  let uploadedFiles = [];
+      // Ensure upload directory exists
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-  for (const match of matches) {
-    const filename = match[1];
-    const fileContent = match[3];
-    const filePath = path.join(uploadsDir, filename);
-    fs.writeFileSync(filePath, fileContent, 'utf8');
-    uploadedFiles.push(filename);
-  }
+      // Save uploaded files
+      if (files && files.images) {
+        for (const file of files.images) {
+          const destPath = path.join(UPLOAD_DIR, file.originalFilename);
+          fs.copyFileSync(file.path, destPath);
+          uploaded.push(file.originalFilename);
+        }
+      }
 
-  const tagsMatch = bodyText.match(/name="tags"\r\n\r\n(.+?)\r\n--/);
-  if (tagsMatch) {
-    const selectedTags = tagsMatch[1].split(',').map(t => t.trim());
-    const jsonPath = path.join(__dirname, '../../selected_params.json');
-    fs.writeFileSync(jsonPath, JSON.stringify(selectedTags, null, 2));
+      // Save selected categories (if present)
+      if (fields && fields.selected) {
+        try {
+          selectedParams = JSON.parse(fields.selected[0]);
+          fs.writeFileSync(PARAMS_FILE, JSON.stringify(selectedParams));
+        } catch (e) {
+          return resolve({
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Invalid category data', details: e.message })
+          });
+        }
+      }
 
-    // Run the Python script directly on Netlify
-    const result = spawnSync('python3', ['sort_and_zip.py'], {
-      cwd: path.join(__dirname, '../../'),
-      encoding: 'utf-8'
+      // Call Python script to classify and zip
+      const py = spawn('python3', [PYTHON_SCRIPT]);
+      let output = '';
+
+      py.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      py.stderr.on('data', (data) => {
+        console.error('stderr:', data.toString());
+      });
+
+      py.on('close', (code) => {
+        const result = {
+          success: code === 0,
+          uploaded,
+          sorted: selectedParams,
+          output
+        };
+        resolve({
+          statusCode: 200,
+          body: JSON.stringify(result)
+        });
+      });
     });
-
-    if (result.error) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to run classification', detail: result.error.message })
-      };
-    }
-
-    if (result.stderr) {
-      console.error("STDERR:", result.stderr);
-    }
-  }
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ success: true, uploaded: uploadedFiles.length, sorted: !!tagsMatch }),
-  };
+  });
 };
