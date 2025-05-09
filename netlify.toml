@@ -6,3 +6,6 @@
   from = "/api/upload"
   to = "/.netlify/functions/upload"
   status = 200
+  
+[build.environment]
+  NODE_VERSION = "18"
