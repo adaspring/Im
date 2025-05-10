@@ -1,19 +1,13 @@
-const AWS = require('aws-sdk');
 const multiparty = require('multiparty');
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
 
-// Configure AWS S3 - Netlify will provide these via environment variables
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION
-});
+const STORAGE_DIR = '/tmp/uploaded_images';
 
-exports.handler = async function (event, context) {
+exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   return new Promise((resolve) => {
@@ -24,45 +18,31 @@ exports.handler = async function (event, context) {
       if (err) {
         return resolve({
           statusCode: 400,
-          body: JSON.stringify({ error: 'Form parsing failed', details: err.message })
+          body: JSON.stringify({ error: 'Form parsing failed' })
         });
       }
 
-      const images = files.images || [];
-
       try {
-        // Process all uploaded images
-        for (const file of images) {
-          const fileContent = require('fs').readFileSync(file.path);
-          const params = {
-            Bucket: process.env.S3_BUCKET_NAME,
-            Key: `uploads/${file.originalFilename}`,
-            Body: fileContent,
-            ACL: 'public-read', // Set appropriate permissions
-            ContentType: file.headers['content-type']
-          };
+        fs.mkdirSync(STORAGE_DIR, { recursive: true });
 
-          // Upload to S3
-          const data = await s3.upload(params).promise();
-          uploaded.push({
-            filename: file.originalFilename,
-            url: data.Location
-          });
+        for (const file of files.images || []) {
+          const newFilename = `${uuidv4()}${path.extname(file.originalFilename)}`;
+          const targetPath = path.join(STORAGE_DIR, newFilename);
+          fs.copyFileSync(file.path, targetPath);
+          uploaded.push(newFilename);
         }
 
         resolve({
           statusCode: 200,
           body: JSON.stringify({
             success: true,
-            message: 'Images uploaded successfully',
-            uploaded
+            uploaded: uploaded
           })
         });
       } catch (error) {
-        console.error('Upload failed:', error);
         resolve({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Upload failed', details: error.message })
+          body: JSON.stringify({ error: 'Upload failed' })
         });
       }
     });
