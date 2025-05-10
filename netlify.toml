@@ -1,20 +1,30 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
-  command = "npm install"
+  command = "npm install && npm run build"
+
+# Git LFS Plugin for persistent storage
+[[plugins]]
+  package = "@netlify/plugin-git-lfs"
 
 [functions]
   node_bundler = "esbuild"
+  included_files = [
+    "public/uploads/*",
+    "public/zips/*"
+  ]
+
+# Redirects for uploaded files
+[[redirects]]
+  from = "/uploads/*"
+  to = "/public/uploads/:splat"
+  status = 200
 
 [[redirects]]
   from = "/zips/*"
-  to = "/.netlify/functions/serve-zip/:splat"
+  to = "/public/zips/:splat"
   status = 200
 
 [dev]
   framework = "#static"
   targetPort = 3000
-
-
-[[plugins]]
-  package = "@netlify/plugin-git-lfs"
