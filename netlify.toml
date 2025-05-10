@@ -1,28 +1,16 @@
 [build]
-  command = "npm run build"
-  functions = "netlify/functions"
   publish = "public"
-
-[build.environment]
-  OPENAI_API_KEY = "your-openai-api-key" # Better set in Netlify UI
-  PYTHON_VERSION = "3.10"
+  functions = "netlify/functions"
+  command = "npm install"
 
 [functions]
   node_bundler = "esbuild"
 
-# Optional: configure functions individually
-[functions.upload]
-  included_files = ["*.jpg", "*.png"]
-
-[functions.process]
-  included_files = ["sort_and_zip.py", "requirements.txt"]
-
 [[redirects]]
-  from = "/api/upload"
-  to = "/.netlify/functions/upload"
+  from = "/zips/*"
+  to = "/.netlify/functions/serve-zip/:splat"
   status = 200
 
-[[redirects]]
-  from = "/api/process"
-  to = "/.netlify/functions/process"
-  status = 200
+[dev]
+  framework = "#static"
+  targetPort = 3000
