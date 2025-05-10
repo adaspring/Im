@@ -14,3 +14,7 @@
 [dev]
   framework = "#static"
   targetPort = 3000
+
+
+[[plugins]]
+  package = "@netlify/plugin-git-lfs"
