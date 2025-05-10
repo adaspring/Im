@@ -3,16 +3,11 @@
   "version": "1.0.0",
   "description": "Persistent image upload and processing with Netlify",
   "scripts": {
-    "build": "echo 'No build needed for static site'",
-    "setup": "git lfs install && git lfs track 'public/uploads/*' 'public/zips/*'"
+    "build": "echo 'No build needed for static site'"
   },
   "dependencies": {
     "adm-zip": "^0.5.9",
     "axios": "^1.4.0",
-    "multiparty": "^4.2.3",
-    "@netlify/plugin-git-lfs": "^3.0.0"
-  },
-  "devDependencies": {
-    "netlify-lambda": "^2.0.15"
+    "multiparty": "^4.2.3"
   }
 }
