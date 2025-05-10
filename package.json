@@ -1,5 +1,5 @@
 {
-  "name": "netlify-image-sorter",
+  "name": "smart-image-sorter",
   "version": "1.0.0",
   "description": "Image upload and sorting application",
   "scripts": {
