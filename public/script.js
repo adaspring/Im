@@ -47,12 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const formData = new FormData();
             
-            // Add files to FormData (modified to work with multiparty)
+            // Add files to FormData
             for (let i = 0; i < files.length; i++) {
                 formData.append('images', files[i]);
             }
             
-            // Upload the files (modified endpoint)
+            // Upload the files
             const response = await fetch('/.netlify/functions/upload', {
                 method: 'POST',
                 body: formData
@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             
             if (result.success) {
-                // Modified to handle new response format with URLs
                 showStatus(`Successfully uploaded ${result.uploaded.length} images. You can now select categories for sorting.`, 'success');
                 uploadedFiles = true;
                 enableSortingIfReady();
@@ -92,9 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        const selectedCategories = Array.from(categoryCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
+        const selectedCategories = getSelectedCategories();
             
         if (selectedCategories.length === 0) {
             showStatus('Please select at least one category', 'warning');
@@ -121,22 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (result.success) {
                 showStatus(`Successfully sorted images into ${result.zipFiles.length} categories.`, 'success');
-                
-                // Display download links
-                zipLinks.innerHTML = '';
-                if (result.zipFiles && result.zipFiles.length > 0) {
-                    result.zipFiles.forEach(zipFile => {
-                        const link = document.createElement('a');
-                        link.href = zipFile.url;
-                        link.className = 'zip-link';
-                        link.download = zipFile.filename;
-                        link.textContent = zipFile.categoryName;
-                        zipLinks.appendChild(link);
-                    });
-                    downloadSection.classList.remove('hidden');
-                } else {
-                    showStatus('No matching images found for the selected categories', 'warning');
-                }
+                displayDownloadLinks(result.zipFiles);
             } else {
                 throw new Error(result.message || 'Unknown error during processing');
             }
@@ -148,6 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Helper function to get selected categories
+    function getSelectedCategories() {
+        return Array.from(categoryCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+    }
+    
     // Helper function to check if sorting should be enabled
     function enableSortingIfReady() {
         const anyCheckboxSelected = Array.from(categoryCheckboxes).some(cb => cb.checked);
@@ -158,5 +147,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function showStatus(message, type = 'info') {
         statusBox.textContent = message;
         statusBox.className = `status show ${type}`;
+    }
+    
+    // Helper function to display download links
+    function displayDownloadLinks(zipFiles) {
+        zipLinks.innerHTML = '';
+        
+        if (zipFiles && zipFiles.length > 0) {
+            zipFiles.forEach(zipFile => {
+                const link = document.createElement('a');
+                link.href = zipFile.url;
+                link.className = 'zip-link';
+                link.download = zipFile.filename;
+                link.textContent = `${zipFile.categoryName} (${zipFile.count} images)`;
+                zipLinks.appendChild(link);
+            });
+            downloadSection.classList.remove('hidden');
+        } else {
+            showStatus('No matching images found for the selected categories', 'warning');
+        }
     }
 });
