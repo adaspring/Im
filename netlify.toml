@@ -3,18 +3,12 @@
   functions = "netlify/functions"
   command = "npm install && npm run build"
 
-# Git LFS Plugin for persistent storage
-[[plugins]]
-  package = "@netlify/plugin-git-lfs"
+# Remove the [[plugins]] section completely - no need for it
+# Netlify handles Git LFS internally
 
 [functions]
   node_bundler = "esbuild"
-  included_files = [
-    "public/uploads/*",
-    "public/zips/*"
-  ]
 
-# Redirects for uploaded files
 [[redirects]]
   from = "/uploads/*"
   to = "/public/uploads/:splat"
@@ -24,7 +18,3 @@
   from = "/zips/*"
   to = "/public/zips/:splat"
   status = 200
-
-[dev]
-  framework = "#static"
-  targetPort = 3000
