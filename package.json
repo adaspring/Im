@@ -1,24 +1,14 @@
 {
-  "name": "smart-image-sorter",
+  "name": "netlify-image-sorter",
   "version": "1.0.0",
-  "description": "An image sorting and zipping app using OpenAI GPT-4o classification",
-  "main": "upload.js",
-  "type": "commonjs",
+  "description": "Image upload and sorting application",
   "scripts": {
-    "build": "node install_python.js",
-    "process": "node process.js"
+    "build": "echo 'No build needed for static site'"
   },
   "dependencies": {
-    "archiver": "^5.3.1",
-    "axios": "^1.6.8",
+    "adm-zip": "^0.5.9",
+    "axios": "^1.4.0",
     "multiparty": "^4.2.3",
-    "adm-zip": "^0.5.10",
-    "node-fetch": "^2.6.9"
-  },
-  "engines": {
-    "node": ">=16"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "MIT"
+    "uuid": "^9.0.0"
+  }
 }
